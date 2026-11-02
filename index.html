@@ -1,0 +1,950 @@
+<!doctype html>
+<html lang="fi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Privacy: this policy forbids every network connection, form submission and external resource.
+     The page can only run its own inline code. Nothing is stored or sent anywhere. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; form-action 'none'; base-uri 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#f4f3ef">
+<title>How Random Are You?</title>
+<style>
+:root {
+  color-scheme: light;
+  --bg: #f4f3ef;
+  --surface: #fcfcfb;
+  --surface-2: #ecebe6;
+  --border: #dddcd5;
+  --text: #0b0b0b;
+  --text-2: #52514e;
+  --text-3: #75746f;
+  --a: #2a78d6;         /* choice A — categorical slot 1 */
+  --b: #eb6834;         /* choice B — categorical slot 2 */
+  --bar: #1baf7a;       /* triplet bars — categorical slot 3 */
+  --good: #0ca30c;
+  --bad: #d03b3b;
+  --accent: #0b0b0b;
+  --accent-ink: #fcfcfb;
+  --radius: 18px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #111110;
+    --surface: #1a1a19;
+    --surface-2: #262624;
+    --border: #353532;
+    --text: #f0efec;
+    --text-2: #c3c2b7;
+    --text-3: #9b9a92;
+    --a: #3987e5;
+    --b: #d95926;
+    --bar: #199e70;
+    --accent: #f0efec;
+    --accent-ink: #111110;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #111110; --surface: #1a1a19; --surface-2: #262624; --border: #353532;
+  --text: #f0efec; --text-2: #c3c2b7; --text-3: #9b9a92;
+  --a: #3987e5; --b: #d95926; --bar: #199e70; --accent: #f0efec; --accent-ink: #111110;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font: 17px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+button { font: inherit; color: inherit; touch-action: manipulation; }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 20px 16px 40px; }
+.topbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 8px; }
+.brand { font-weight: 700; letter-spacing: -0.01em; color: var(--text-2); font-size: 15px; }
+.lang { display: flex; gap: 4px; background: var(--surface-2); padding: 4px; border-radius: 999px; }
+.lang button { border: 0; background: transparent; padding: 6px 14px; border-radius: 999px; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--text-2); }
+.lang button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+
+.screen { display: none; }
+.screen.active { display: block; animation: fade .25s ease; }
+@keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+h1 { font-size: clamp(36px, 6vw, 64px); line-height: 1.05; letter-spacing: -0.03em; margin: 24px 0 12px; }
+h2 { font-size: clamp(22px, 3vw, 30px); letter-spacing: -0.02em; margin: 0 0 8px; line-height: 1.2; }
+h3 { font-size: 18px; margin: 0 0 6px; }
+p { margin: 0 0 12px; }
+.lead { font-size: clamp(18px, 2.2vw, 22px); color: var(--text-2); max-width: 46em; }
+.muted { color: var(--text-2); }
+.small { font-size: 14px; color: var(--text-3); }
+
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+.stack > * + * { margin-top: 16px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+@media (max-width: 760px) { .grid2, .grid3 { grid-template-columns: 1fr; } }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  border: 0; border-radius: 999px; padding: 16px 30px; min-height: 56px;
+  background: var(--accent); color: var(--accent-ink); font-weight: 700; font-size: 19px; cursor: pointer;
+  user-select: none; -webkit-user-select: none;
+}
+.btn.secondary { background: var(--surface-2); color: var(--text); }
+.btn:active { transform: scale(.97); }
+.btn:focus-visible, .choice:focus-visible, .seg button:focus-visible, .lang button:focus-visible { outline: 3px solid var(--a); outline-offset: 3px; }
+
+.seg { display: inline-flex; gap: 6px; background: var(--surface-2); padding: 5px; border-radius: 999px; }
+.seg button { border: 0; background: transparent; border-radius: 999px; padding: 10px 20px; min-height: 44px; font-weight: 600; cursor: pointer; color: var(--text-2); }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+
+.steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 28px 0; }
+@media (max-width: 760px) { .steps { grid-template-columns: 1fr; } }
+.step-num { font-size: 13px; font-weight: 700; color: var(--text-3); letter-spacing: .08em; text-transform: uppercase; }
+
+.privacy { display: flex; gap: 10px; align-items: flex-start; margin-top: 28px; font-size: 14px; color: var(--text-2); }
+.privacy svg { flex: none; margin-top: 2px; }
+
+/* ---------- Play screen ---------- */
+.play-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin: 12px 0 14px; }
+.counter { font-size: clamp(30px, 5vw, 48px); font-weight: 800; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; line-height: 1; }
+.counter span { color: var(--text-3); font-weight: 600; font-size: .55em; }
+.oracle { text-align: right; }
+.oracle-score { font-size: clamp(22px, 3vw, 30px); font-weight: 800; font-variant-numeric: tabular-nums; }
+.progress { height: 8px; background: var(--surface-2); border-radius: 99px; overflow: hidden; }
+.progress > div { height: 100%; width: 0; background: var(--text); border-radius: 99px; transition: width .15s; }
+
+.choices { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 18px 0; }
+.choice {
+  height: min(44vh, 380px); min-height: 180px; border: 0; border-radius: 28px; cursor: pointer;
+  color: #fff; font-size: clamp(64px, 12vw, 120px); font-weight: 800;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+  transition: transform .06s ease, filter .06s ease;
+  box-shadow: inset 0 -6px 0 rgba(0,0,0,.18);
+}
+.choice small { font-size: 16px; font-weight: 600; opacity: .85; }
+.choice.a { background: var(--a); }
+.choice.b { background: var(--b); }
+.choice.pressed { transform: scale(.96); filter: brightness(1.12); }
+.choice .shape { width: 34px; height: 34px; background: rgba(255,255,255,.9); }
+.choice.a .shape { border-radius: 6px; }
+.choice.b .shape { border-radius: 50%; }
+
+.feedback { min-height: 30px; text-align: center; font-weight: 700; font-size: 18px; }
+.feedback .hit { color: var(--bad); }
+.feedback .miss { color: var(--good); }
+.tail { display: flex; justify-content: center; gap: 4px; flex-wrap: nowrap; overflow: hidden; height: 22px; margin-top: 6px; }
+
+/* sequence dots: A = rounded square (blue), B = circle (orange) — shape + colour */
+.dot { width: 14px; height: 14px; flex: none; }
+.dot.a { background: var(--a); border-radius: 3px; }
+.dot.b { background: var(--b); border-radius: 50%; }
+.dots { display: grid; grid-template-columns: repeat(20, 1fr); gap: 3px; }
+.dots .dot { width: 100%; height: auto; aspect-ratio: 1; }
+.dots .dot.pred { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--text); }
+.dots .dot.dim { opacity: .28; }
+
+/* ---------- Results ---------- */
+.hero { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; }
+@media (max-width: 760px) { .hero { grid-template-columns: 1fr; } }
+.big { font-size: clamp(48px, 8vw, 84px); font-weight: 800; letter-spacing: -0.04em; line-height: 1; font-variant-numeric: tabular-nums; margin: 6px 0 10px; }
+.big small { font-size: .4em; color: var(--text-3); font-weight: 600; letter-spacing: 0; }
+.kicker { font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); }
+.verdict { font-size: clamp(20px, 2.6vw, 26px); font-weight: 650; line-height: 1.35; margin: 8px 0 4px; max-width: 40em; }
+
+.meter { position: relative; height: 14px; background: var(--surface-2); border-radius: 99px; margin: 14px 0 6px; }
+.meter .band { position: absolute; top: 0; bottom: 0; background: color-mix(in srgb, var(--good) 28%, transparent); border-radius: 99px; }
+.meter .mark { position: absolute; top: -5px; width: 4px; height: 24px; background: var(--text); border-radius: 2px; transform: translateX(-2px); }
+.meter-labels { display: flex; justify-content: space-between; font-size: 13px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+
+.src-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+.src-tag { font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 99px; background: var(--surface-2); color: var(--text-2); white-space: nowrap; }
+
+.legend { display: flex; gap: 18px; flex-wrap: wrap; font-size: 14px; color: var(--text-2); margin: 4px 0 12px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 11px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { font-size: 13px; color: var(--text-3); font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+td.num { white-space: nowrap; }
+td .why { display: block; font-size: 13px; color: var(--text-3); margin-top: 2px; }
+.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.ok, .warn { display: inline-flex; align-items: center; gap: 5px; }
+.ok::before { content: "✓"; color: var(--good); font-weight: 800; }
+.warn::before { content: "!"; display: inline-grid; place-items: center; width: 17px; height: 17px; border-radius: 50%; background: var(--bad); color: #fff; font-size: 12px; font-weight: 800; }
+
+.bars { display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; align-items: end; height: 180px; position: relative; margin-top: 26px; }
+.bars .col { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; position: relative; cursor: default; }
+.bars .bar { width: 70%; max-width: 46px; background: var(--bar); border-radius: 4px 4px 0 0; min-height: 2px; }
+.bars .val { font-size: 13px; color: var(--text-2); margin-bottom: 3px; font-variant-numeric: tabular-nums; }
+.bars .expect { position: absolute; left: 0; right: 0; border-top: 2px dashed var(--text-3); pointer-events: none; }
+.bars .expect span { position: absolute; right: 0; top: -22px; font-size: 12px; color: var(--text-3); background: var(--surface); padding: 0 4px; }
+.bar-labels { display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; margin-top: 6px; border-top: 1px solid var(--border); padding-top: 8px; }
+.bar-labels div { display: flex; justify-content: center; gap: 2px; }
+.bar-labels .dot { width: 10px; height: 10px; }
+
+.attack-log { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 15px; background: var(--surface-2); border-radius: 12px; padding: 14px 16px; min-height: 120px; white-space: pre-wrap; line-height: 1.6; }
+.attack-big { font-size: 34px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+
+.lesson { display: grid; grid-template-columns: 40px 1fr; gap: 12px; align-items: start; }
+.lesson .n { width: 36px; height: 36px; border-radius: 50%; background: var(--surface-2); display: grid; place-items: center; font-weight: 800; }
+
+.actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin: 28px 0 8px; }
+.tip { position: fixed; pointer-events: none; z-index: 10; background: var(--text); color: var(--surface); padding: 6px 10px; border-radius: 8px; font-size: 14px; display: none; max-width: 240px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="brand">How Random Are You?</div>
+    <div class="lang" role="group" aria-label="Language">
+      <button type="button" data-lang="fi" aria-pressed="true">FI</button>
+      <button type="button" data-lang="en" aria-pressed="false">EN</button>
+    </div>
+  </div>
+
+  <!-- ================= INTRO ================= -->
+  <section class="screen active" id="intro">
+    <h1 data-i18n="title"></h1>
+    <p class="lead" data-i18n="introLead"></p>
+
+    <div class="steps">
+      <div class="card"><div class="step-num" data-i18n="s1k"></div><h3 data-i18n="s1h"></h3><p class="muted" data-i18n="s1p"></p></div>
+      <div class="card"><div class="step-num" data-i18n="s2k"></div><h3 data-i18n="s2h"></h3><p class="muted" data-i18n="s2p"></p></div>
+      <div class="card"><div class="step-num" data-i18n="s3k"></div><h3 data-i18n="s3h"></h3><p class="muted" data-i18n="s3p"></p></div>
+    </div>
+
+    <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap;">
+      <div class="seg" role="group" id="lenSeg" aria-label="Length">
+        <button type="button" data-n="50" aria-pressed="false">50</button>
+        <button type="button" data-n="100" aria-pressed="true">100</button>
+        <button type="button" data-n="200" aria-pressed="false">200</button>
+      </div>
+      <span class="muted" data-i18n="presses"></span>
+      <button type="button" class="btn" id="startBtn" data-i18n="start"></button>
+    </div>
+
+    <div class="privacy">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+      <span data-i18n="privacy"></span>
+    </div>
+  </section>
+
+  <!-- ================= PLAY ================= -->
+  <section class="screen" id="play">
+    <div class="play-head">
+      <div>
+        <div class="kicker" data-i18n="pressed"></div>
+        <div class="counter" id="counter">0 <span>/ 100</span></div>
+      </div>
+      <div class="oracle">
+        <div class="kicker" data-i18n="oracleLive"></div>
+        <div class="oracle-score" id="oracleScore">–</div>
+      </div>
+    </div>
+    <div class="progress"><div id="progressBar"></div></div>
+
+    <div class="choices">
+      <button type="button" class="choice a" id="btnA" aria-label="A"><span class="shape" aria-hidden="true"></span>A</button>
+      <button type="button" class="choice b" id="btnB" aria-label="B"><span class="shape" aria-hidden="true"></span>B</button>
+    </div>
+
+    <div class="feedback" id="feedback" aria-live="polite"></div>
+    <div class="tail" id="tail" aria-hidden="true"></div>
+    <p class="small" style="text-align:center; margin-top:14px;" data-i18n="playHint"></p>
+    <div style="text-align:center;"><button type="button" class="btn secondary" id="quitBtn" data-i18n="quit" style="min-height:44px; padding:10px 22px; font-size:16px;"></button></div>
+  </section>
+
+  <!-- ================= RESULTS ================= -->
+  <section class="screen" id="results">
+    <h1 style="margin-top:12px;" data-i18n="resultsTitle"></h1>
+    <p class="verdict" id="verdict"></p>
+
+    <div class="hero">
+      <div class="card">
+        <div class="kicker" data-i18n="q1"></div>
+        <div class="big" id="looksScore">–</div>
+        <p class="muted" id="looksText"></p>
+      </div>
+      <div class="card">
+        <div class="kicker" data-i18n="q2"></div>
+        <div class="big" id="predScore">–</div>
+        <div class="meter" id="predMeter"><div class="band"></div><div class="mark"></div></div>
+        <div class="meter-labels"><span>0 %</span><span>50 %</span><span>100 %</span></div>
+        <p class="muted" id="predText" style="margin-top:10px;"></p>
+      </div>
+    </div>
+
+    <div class="stack">
+      <div class="card">
+        <h2 data-i18n="cmpTitle"></h2>
+        <p class="muted" data-i18n="cmpLead"></p>
+        <div class="legend">
+          <span><span class="dot a"></span>A</span>
+          <span><span class="dot b"></span>B</span>
+        </div>
+        <div class="grid3" id="sources"></div>
+      </div>
+
+      <div class="card">
+        <h2 data-i18n="testsTitle"></h2>
+        <p class="muted" data-i18n="testsLead"></p>
+        <div class="table-scroll"><table id="testsTable"></table></div>
+        <p class="small" style="margin-top:10px;" id="rangeNote"></p>
+      </div>
+
+      <div class="card">
+        <h2 data-i18n="triTitle"></h2>
+        <p class="muted" data-i18n="triLead"></p>
+        <div class="bars" id="bars" role="img"></div>
+        <div class="bar-labels" id="barLabels" aria-hidden="true"></div>
+        <p class="small" style="margin-top:10px;" id="triNote"></p>
+      </div>
+
+      <div class="card">
+        <h2 data-i18n="attackTitle"></h2>
+        <p class="muted" data-i18n="attackLead"></p>
+        <div class="grid2" style="margin-top:12px;">
+          <div class="stack" style="--gap:10px;">
+            <div class="src-head"><h3 data-i18n="srcPrng"></h3><span class="src-tag">PRNG</span></div>
+            <div class="dots" id="atkDotsP"></div>
+            <div class="attack-log" id="atkLogP"></div>
+          </div>
+          <div class="stack">
+            <div class="src-head"><h3 data-i18n="srcCsprng"></h3><span class="src-tag">CSPRNG</span></div>
+            <div class="dots" id="atkDotsC"></div>
+            <div class="attack-log" id="atkLogC"></div>
+          </div>
+        </div>
+        <div style="text-align:center; margin-top:18px;"><button type="button" class="btn" id="attackBtn" data-i18n="attackBtn"></button></div>
+      </div>
+
+      <div class="card">
+        <h2 data-i18n="whyTitle"></h2>
+        <div class="stack" style="margin-top:14px;">
+          <div class="lesson"><div class="n">1</div><div><h3 data-i18n="w1h"></h3><p class="muted" data-i18n="w1p"></p></div></div>
+          <div class="lesson"><div class="n">2</div><div><h3 data-i18n="w2h"></h3><p class="muted" data-i18n="w2p"></p></div></div>
+          <div class="lesson"><div class="n">3</div><div><h3 data-i18n="w3h"></h3><p class="muted" data-i18n="w3p"></p></div></div>
+          <div class="lesson"><div class="n">4</div><div><h3 data-i18n="w4h"></h3><p class="muted" data-i18n="w4p"></p></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button type="button" class="btn" id="againBtn" data-i18n="again"></button>
+    </div>
+    <div class="privacy" style="justify-content:center;">
+      <span data-i18n="privacyEnd"></span>
+    </div>
+  </section>
+</div>
+<div class="tip" id="tip" role="tooltip"></div>
+
+<script>
+"use strict";
+/* =====================================================================
+   How Random Are You?
+   Everything runs locally. No storage, no cookies, no network (enforced by CSP).
+   ===================================================================== */
+
+/* ---------------- Texts ---------------- */
+const TEXT = {
+  fi: {
+    title: "Kuinka satunnainen olet?",
+    introLead: "Yritä painella kahta painiketta niin satunnaisesti kuin osaat. Samaan aikaan pieni ennustaja yrittää arvata, kumpaa painat seuraavaksi. Lopuksi vertaamme sinua tietokoneen tuottamaan satunnaisuuteen.",
+    s1k: "Vaihe 1", s1h: "Paina A tai B", s1p: "Älä mieti liikaa – tee sarjasta niin arvaamaton kuin pystyt.",
+    s2k: "Vaihe 2", s2h: "Ennustaja seuraa", s2p: "Se oppii tottumuksistasi ja arvaa jokaisen painalluksen etukäteen. Satunnaista sarjaa ei voi arvata yli 50 % tarkkuudella.",
+    s3k: "Vaihe 3", s3h: "Vertaa koneisiin", s3p: "Näet, miltä näyttävät pseudosatunnainen (PRNG) ja kryptografisesti turvallinen (CSPRNG) sarja – ja miksi vain toinen on oikeasti ennustamaton.",
+    presses: "painallusta",
+    start: "Aloita",
+    privacy: "Tämä sovellus ei kerää, tallenna eikä lähetä mitään tietoja. Ei evästeitä eikä verkkoyhteyksiä – kaikki lasketaan tässä laitteessa ja pyyhitään, kun aloitat alusta.",
+    pressed: "Painalluksia",
+    oracleLive: "Ennustaja arvasi oikein",
+    playHint: "Vinkki: näppäimistöllä toimivat myös ← / → tai A / B.",
+    quit: "Lopeta",
+    hit: "Ennustaja arvasi oikein!",
+    miss: "Ennustaja meni ohi",
+    first: "Ennustaja aloittaa…",
+    resultsTitle: "Tulokset",
+    q1: "Näytätkö satunnaiselta?",
+    q2: "Olitko ennustamaton?",
+    looksText: (p, t) => `Sarjasi läpäisi ${p}/${t} tilastotestistä, joita käytetään satunnaisuuden mittaamiseen.`,
+    predText: (acc, lo, hi) => `Ennustaja arvasi ${acc} % painalluksistasi oikein. Aidolle satunnaisuudelle tulos osuu tyypillisesti välille ${lo}–${hi} % (vihreä alue).`,
+    verdict: {
+      both: "Vaikuttavaa! Sarjasi näyttää satunnaiselta ja ennustaja ei päässyt sinusta juuri lainkaan niskan päälle.",
+      looksNotUnpred: "Sarjasi näyttää päällisin puolin satunnaiselta – mutta ennustaja pystyi silti arvaamaan sinua. Juuri tämä on koko jutun ydin: satunnaiselta näyttävä ei ole sama asia kuin ennustamaton.",
+      unpredNotLooks: "Ennustaja ei saanut sinusta otetta, mutta tilastotestit paljastavat kuvioita. Ihmisen satunnaisuus vuotaa aina jostain.",
+      neither: "Ihmisaivot rakastavat kuvioita – ja se näkyy. Sekä tilastotestit että ennustaja löysivät sarjastasi säännönmukaisuutta."
+    },
+    cmpTitle: "Sinä vs. koneet",
+    cmpLead: "Sama määrä valintoja kolmesta lähteestä. Huomaatko, että koneiden sarjoissa on usein pidempiä putkia? Aito satunnaisuus on ”möykkyistä” – ihmiset vaihtavat liian usein.",
+    srcYou: "Sinä", srcPrng: "Pseudosatunnainen", srcCsprng: "Kryptografinen",
+    srcYouSub: "Ihmisen valinnat",
+    srcPrngSub: "mulberry32-kaava + 16-bittinen siemen",
+    srcCsprngSub: "crypto.getRandomValues()",
+    oracleOn: "Ennustaja osui",
+    testsTitle: "Tilastotestit",
+    testsLead: "Nämä testit kysyvät: näyttääkö sarja siltä, miltä satunnainen sarja tyypillisesti näyttää? Vihreä väli kertoo, mihin 95 % aidoista satunnaissarjoista osuu.",
+    thTest: "Testi", thYou: "Sinä", thPrng: "PRNG", thCsprng: "CSPRNG", thRange: "Satunnaisen väli",
+    tBal: "B-valintojen osuus", tBalWhy: "Kumpaakin pitäisi tulla suunnilleen yhtä paljon.",
+    tSw: "Vaihtojen osuus", tSwWhy: "Satunnainen vaihtaa noin joka toisella kerralla. Ihmiset vaihtavat usein liikaa.",
+    tRun: "Pisin putki", tRunWhy: "Satunnaisessa sarjassa on yllättävän pitkiä samojen putkia.",
+    tTri: "Kolmikkojen tasaisuus (χ²)", tTriWhy: "Kaikkia kolmen valinnan kuvioita pitäisi tulla tasaisesti.",
+    tPred: "Ennustajan osumat", tPredWhy: "Ei testaa ulkonäköä vaan ennustettavuutta.",
+    rangeNote: (k) => `Välit on laskettu simuloimalla ${k} kryptografisesti satunnaista sarjaa tässä laitteessa.`,
+    triTitle: "Mitä kuvioita suosit?",
+    triLead: "Jokainen kolmen peräkkäisen valinnan yhdistelmä (esim. A A B). Satunnaisessa sarjassa kaikki kahdeksan ovat yhtä yleisiä. Ihmiset välttävät usein AAA- ja BBB-kuvioita.",
+    triNote: (e) => `Katkoviiva = odotusarvo satunnaiselle sarjalle (${e}).`,
+    triTip: (p, c, e) => `${p}: ${c} kertaa (satunnaisella odotus ${e})`,
+    attackTitle: "Näyttää satunnaiselta ≠ ennustamaton",
+    attackLead: "Pseudosatunnainen sarja läpäisi yllä samat testit kuin kryptografinen. Mutta se on tuotettu kaavalla siemenluvusta – joten se, joka tietää kaavan, voi kokeilla kaikki siemenet. Hyökkääjä näkee 32 ensimmäistä valintaa ja yrittää ennustaa loput.",
+    attackBtn: "Käynnistä hyökkäys",
+    attackAgain: "Aja uudelleen",
+    atkIdle: "Odottaa…",
+    atkSeen: (k) => `Nähty: ${k} ensimmäistä valintaa`,
+    atkTrying: (i, tot) => `Kokeillaan siemeniä: ${i.toLocaleString('fi-FI')} / ${tot.toLocaleString('fi-FI')}`,
+    atkFound: (s, ms) => `Siemen löytyi: ${s}  (${ms} ms)`,
+    atkPredicted: (ok, tot) => `Ennustettu loput: ${ok}/${tot} oikein`,
+    atkNone: (tot) => `0 / ${tot.toLocaleString('fi-FI')} siementä täsmää.`,
+    atkNoSeed: "Ei siementä, jota arvata: luvut tulevat käyttöjärjestelmän entropialähteestä. Ennustaminen ei onnistu – ei edes kaikki aiemmat luvut nähneenä.",
+    whyTitle: "Mitä tästä opimme?",
+    w1h: "Ihmiset ovat huonoja satunnaisgeneraattoreita",
+    w1p: "Yritämme näyttää satunnaisilta: vaihdamme liian usein, vältämme pitkiä putkia ja tasapainotamme valintoja. Juuri nämä tottumukset tekevät meistä ennustettavia.",
+    w2h: "Tilastotestit katsovat vain ulkonäköä",
+    w2p: "Testi voi kertoa, että sarja on epätasainen, mutta läpäisty testi ei todista, että sarja olisi arvaamaton. Täysin ennustettava sarja voi näyttää täydellisen satunnaiselta.",
+    w3h: "Pseudosatunnainen = deterministinen",
+    w3p: "Esim. JavaScriptin Math.random() on kaava: sama siemen tuottaa aina saman sarjan. Se riittää peleihin ja simulaatioihin, mutta kun siemenen tai sisäisen tilan saa selville, kaikki tulevat luvut ovat tiedossa.",
+    w4h: "Turvallisuus vaatii kryptografista satunnaisuutta",
+    w4p: "Salasanat, salausavaimet ja pankkitunnusten koodit tehdään CSPRNG:llä (esim. crypto.getRandomValues). Se on suunniteltu niin, ettei seuraavaa lukua voi päätellä, vaikka näkisi kaikki aiemmat.",
+    again: "Pelaa uudelleen",
+    privacyEnd: "Mitään ei tallennettu. Tulokset katoavat, kun painat ”Pelaa uudelleen” tai sovellus on hetken käyttämättä.",
+    pass: "ok", fail: "poikkeava",
+    unpredScore: "Ennustamattomuus",
+    na: "–"
+  },
+  en: {
+    title: "How random are you?",
+    introLead: "Try to press two buttons as randomly as you can. Meanwhile a small predictor tries to guess which one you'll press next. At the end we compare you with randomness made by a computer.",
+    s1k: "Step 1", s1h: "Press A or B", s1p: "Don't overthink it – make the sequence as unpredictable as you can.",
+    s2k: "Step 2", s2h: "The predictor watches", s2p: "It learns your habits and guesses every press in advance. A truly random sequence can't be guessed better than 50%.",
+    s3k: "Step 3", s3h: "Compare with machines", s3p: "See what pseudo-random (PRNG) and cryptographically secure (CSPRNG) sequences look like – and why only one of them is truly unpredictable.",
+    presses: "presses",
+    start: "Start",
+    privacy: "This app does not collect, store or send any data. No cookies, no network connections – everything is computed on this device and wiped when you start over.",
+    pressed: "Presses",
+    oracleLive: "Predictor guessed right",
+    playHint: "Tip: on a keyboard you can also use ← / → or A / B.",
+    quit: "Stop",
+    hit: "The predictor guessed it!",
+    miss: "The predictor missed",
+    first: "The predictor is warming up…",
+    resultsTitle: "Results",
+    q1: "Do you look random?",
+    q2: "Were you unpredictable?",
+    looksText: (p, t) => `Your sequence passed ${p}/${t} of the statistical tests used to measure randomness.`,
+    predText: (acc, lo, hi) => `The predictor guessed ${acc}% of your presses correctly. For true randomness the result typically lands between ${lo}–${hi}% (green band).`,
+    verdict: {
+      both: "Impressive! Your sequence looks random and the predictor barely got the upper hand on you.",
+      looksNotUnpred: "On the surface your sequence looks random – yet the predictor could still guess you. That's the whole point: looking random is not the same as being unpredictable.",
+      unpredNotLooks: "The predictor couldn't get a grip on you, but the statistical tests reveal patterns. Human randomness always leaks somewhere.",
+      neither: "Human brains love patterns – and it shows. Both the statistical tests and the predictor found regularities in your sequence."
+    },
+    cmpTitle: "You vs. the machines",
+    cmpLead: "The same number of choices from three sources. Notice how the machines often produce longer streaks? Real randomness is clumpy – people switch too often.",
+    srcYou: "You", srcPrng: "Pseudo-random", srcCsprng: "Cryptographic",
+    srcYouSub: "Human choices",
+    srcPrngSub: "mulberry32 formula + 16-bit seed",
+    srcCsprngSub: "crypto.getRandomValues()",
+    oracleOn: "Predictor hit",
+    testsTitle: "Statistical tests",
+    testsLead: "These tests ask: does the sequence look like a random sequence typically looks? The green range shows where 95% of truly random sequences land.",
+    thTest: "Test", thYou: "You", thPrng: "PRNG", thCsprng: "CSPRNG", thRange: "Random range",
+    tBal: "Share of B", tBalWhy: "Both should appear about equally often.",
+    tSw: "Share of switches", tSwWhy: "Random switches about every other time. People tend to switch too much.",
+    tRun: "Longest streak", tRunWhy: "Random sequences contain surprisingly long streaks.",
+    tTri: "Triplet evenness (χ²)", tTriWhy: "All three-choice patterns should appear evenly.",
+    tPred: "Predictor hits", tPredWhy: "Tests predictability, not appearance.",
+    rangeNote: (k) => `Ranges were computed by simulating ${k} cryptographically random sequences on this device.`,
+    triTitle: "Which patterns do you favour?",
+    triLead: "Every combination of three consecutive choices (e.g. A A B). In a random sequence all eight are equally common. People often avoid AAA and BBB.",
+    triNote: (e) => `Dashed line = expected count for a random sequence (${e}).`,
+    triTip: (p, c, e) => `${p}: ${c} times (random expectation ${e})`,
+    attackTitle: "Looks random ≠ unpredictable",
+    attackLead: "The pseudo-random sequence passed the same tests as the cryptographic one. But it was produced by a formula from a seed number – so anyone who knows the formula can try every seed. The attacker sees the first 32 choices and tries to predict the rest.",
+    attackBtn: "Launch the attack",
+    attackAgain: "Run again",
+    atkIdle: "Waiting…",
+    atkSeen: (k) => `Seen: first ${k} choices`,
+    atkTrying: (i, tot) => `Trying seeds: ${i.toLocaleString('en-US')} / ${tot.toLocaleString('en-US')}`,
+    atkFound: (s, ms) => `Seed found: ${s}  (${ms} ms)`,
+    atkPredicted: (ok, tot) => `Predicted the rest: ${ok}/${tot} correct`,
+    atkNone: (tot) => `0 / ${tot.toLocaleString('en-US')} seeds match.`,
+    atkNoSeed: "No seed to guess: the numbers come from the operating system's entropy source. Prediction fails – even after seeing every previous number.",
+    whyTitle: "What did we learn?",
+    w1h: "Humans are poor random generators",
+    w1p: "We try to look random: we switch too often, avoid long streaks and balance our choices. Exactly these habits make us predictable.",
+    w2h: "Statistical tests only judge appearance",
+    w2p: "A test can tell that a sequence is uneven, but passing a test doesn't prove the sequence is unpredictable. A completely predictable sequence can look perfectly random.",
+    w3h: "Pseudo-random = deterministic",
+    w3p: "JavaScript's Math.random(), for example, is a formula: the same seed always gives the same sequence. Fine for games and simulations – but once the seed or internal state is known, every future number is known.",
+    w4h: "Security needs cryptographic randomness",
+    w4p: "Passwords, encryption keys and one-time codes are made with a CSPRNG (e.g. crypto.getRandomValues). It is designed so the next number can't be inferred even from all previous ones.",
+    again: "Play again",
+    privacyEnd: "Nothing was stored. Results disappear when you press “Play again” or the app is left idle for a while.",
+    pass: "ok", fail: "unusual",
+    unpredScore: "Unpredictability",
+    na: "–"
+  }
+};
+let lang = "fi";
+const t = (k) => TEXT[lang][k];
+
+function applyTexts() {
+  document.documentElement.lang = lang;
+  document.querySelectorAll("[data-i18n]").forEach(el => {
+    const v = TEXT[lang][el.dataset.i18n];
+    if (typeof v === "string") el.textContent = v;
+  });
+  document.querySelectorAll(".lang button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.lang === lang)));
+  if (current === "results" && lastResult) renderResults(lastResult);
+}
+
+/* ---------------- Randomness sources ---------------- */
+function cryptoBits(n) {
+  const buf = new Uint8Array(n);
+  crypto.getRandomValues(buf);
+  return Array.from(buf, x => x & 1);
+}
+function cryptoInt(max) { // uniform integer 0..max-1 (max <= 2^16)
+  const b = new Uint32Array(1);
+  const lim = Math.floor(0x100000000 / max) * max;
+  do { crypto.getRandomValues(b); } while (b[0] >= lim);
+  return b[0] % max;
+}
+// mulberry32: a small, statistically decent, completely deterministic PRNG.
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return function () {
+    a = (a + 0x6D2B79F5) | 0;
+    let x = Math.imul(a ^ (a >>> 15), 1 | a);
+    x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x;
+    return ((x ^ (x >>> 14)) >>> 0) >>> 31; // top bit -> 0/1
+  };
+}
+const SEED_SPACE = 65536; // 16-bit seed: small enough to brute force live
+function prngBits(seed, n) {
+  const next = mulberry32(seed);
+  const out = new Array(n);
+  for (let i = 0; i < n; i++) out[i] = next();
+  return out;
+}
+
+/* ---------------- Predictor ("oracle") ----------------
+   A handful of simple "experts" each look at the last k choices (k = 1..6) and
+   predict whatever most often followed that same context before. The predictor
+   follows whichever expert has recently been guessing best, so it adapts to
+   each player's habits (switching too often, avoiding streaks, little rhythms…).
+   Against truly random input no expert can beat 50 % in the long run. */
+class Predictor {
+  constructor(maxOrder = 6) {
+    this.orders = Array.from({ length: maxOrder }, (_, i) => i + 1);
+    this.counts = new Map();
+    this.score = this.orders.map(() => 0);
+    this.hist = [];
+    this.last = null;
+  }
+  key(k) { let s = k + ":"; const h = this.hist; for (let i = h.length - k; i < h.length; i++) s += h[i]; return s; }
+  expertGuess(k) {
+    const h = this.hist;
+    if (h.length < k) return null;
+    const c = this.counts.get(this.key(k));
+    if (!c || c[0] === c[1]) return null;
+    return c[1] > c[0] ? 1 : 0;
+  }
+  predict() {
+    const h = this.hist;
+    const guesses = this.orders.map(k => this.expertGuess(k));
+    this.last = guesses;
+    let best = -1, bestScore = -Infinity;
+    guesses.forEach((g, i) => { if (g !== null && this.score[i] > bestScore) { bestScore = this.score[i]; best = i; } });
+    if (best >= 0) return guesses[best];
+    return h.length ? 1 - h[h.length - 1] : 0; // no opinion yet: bet on a switch (people switch a lot)
+  }
+  update(bit) {
+    if (this.last) this.last.forEach((g, i) => {
+      if (g !== null) this.score[i] = 0.95 * this.score[i] + (g === bit ? 1 : -1);
+    });
+    const h = this.hist;
+    for (let k = 1; k <= Math.min(this.orders.length, h.length); k++) {
+      const key = this.key(k);
+      let c = this.counts.get(key);
+      if (!c) { c = [0, 0]; this.counts.set(key, c); }
+      c[bit]++;
+    }
+    h.push(bit);
+    this.last = null;
+  }
+}
+function predictorRun(seq) {
+  const p = new Predictor();
+  const hits = new Array(seq.length);
+  let ok = 0;
+  for (let i = 0; i < seq.length; i++) {
+    const g = p.predict();
+    hits[i] = g === seq[i];
+    if (hits[i]) ok++;
+    p.update(seq[i]);
+  }
+  return { ok, hits, acc: ok / seq.length };
+}
+
+/* ---------------- Statistics ---------------- */
+function analyze(seq) {
+  const n = seq.length;
+  let ones = 0, sw = 0, run = 1, longest = n ? 1 : 0;
+  for (let i = 0; i < n; i++) {
+    ones += seq[i];
+    if (i > 0) {
+      if (seq[i] !== seq[i - 1]) { sw++; run = 1; } else { run++; if (run > longest) longest = run; }
+    }
+  }
+  const tri = new Array(8).fill(0);
+  for (let i = 0; i + 2 < n; i++) tri[seq[i] * 4 + seq[i + 1] * 2 + seq[i + 2]]++;
+  const e = (n - 2) / 8;
+  let chi = 0;
+  for (const c of tri) chi += (c - e) * (c - e) / e;
+  const pr = predictorRun(seq);
+  return { n, bShare: ones / n, swShare: n > 1 ? sw / (n - 1) : 0, longest, tri, chi, pred: pr.acc, predHits: pr.hits, predOk: pr.ok };
+}
+
+// Reference ranges via Monte Carlo simulation with cryptographic randomness.
+const SIMS = 2000;
+const refCache = {};
+function quantile(sorted, q) { return sorted[Math.min(sorted.length - 1, Math.max(0, Math.round(q * (sorted.length - 1))))]; }
+function reference(n) {
+  if (refCache[n]) return refCache[n];
+  const m = { bShare: [], swShare: [], longest: [], chi: [], pred: [] };
+  for (let s = 0; s < SIMS; s++) {
+    const r = analyze(cryptoBits(n));
+    for (const k in m) m[k].push(r[k]);
+  }
+  const ref = {};
+  for (const k in m) {
+    const a = m[k].sort((x, y) => x - y);
+    ref[k] = { lo: quantile(a, 0.025), hi: quantile(a, 0.975) };
+  }
+  // chi²: only "too uneven" is suspicious; "too even" also flags (humans over-balance) at the low tail.
+  // predictor: only "too predictable" matters, but < lo is also exploitable (just invert the guesses).
+  return (refCache[n] = ref);
+}
+const inRange = (v, r) => v >= r.lo - 1e-9 && v <= r.hi + 1e-9;
+
+/* ---------------- App state ---------------- */
+let N = 100;
+let current = "intro";
+let game = null;
+let lastResult = null;
+const $ = (id) => document.getElementById(id);
+
+function show(id) {
+  current = id;
+  document.querySelectorAll(".screen").forEach(s => s.classList.toggle("active", s.id === id));
+  window.scrollTo(0, 0);
+}
+
+function startGame() {
+  game = { seq: [], predictor: new Predictor(), ok: 0, hits: [] };
+  $("counter").innerHTML = `0 <span>/ ${N}</span>`;
+  $("oracleScore").textContent = "–";
+  $("progressBar").style.width = "0";
+  $("feedback").textContent = "";
+  $("tail").innerHTML = "";
+  show("play");
+  setTimeout(() => reference(N), 50); // warm up reference ranges in the background
+}
+
+function press(bit) {
+  if (current !== "play" || !game || game.seq.length >= N) return;
+  const g = game.predictor.predict();
+  const hit = g === bit;
+  game.hits.push(hit);
+  if (hit) game.ok++;
+  game.predictor.update(bit);
+  game.seq.push(bit);
+
+  const k = game.seq.length;
+  $("counter").innerHTML = `${k} <span>/ ${N}</span>`;
+  $("progressBar").style.width = (100 * k / N) + "%";
+  $("oracleScore").textContent = `${game.ok}/${k} (${Math.round(100 * game.ok / k)} %)`;
+  $("feedback").innerHTML = hit ? `<span class="hit">● ${t("hit")}</span>` : `<span class="miss">○ ${t("miss")}</span>`;
+
+  const tail = $("tail");
+  const d = document.createElement("span");
+  d.className = "dot " + (bit ? "b" : "a");
+  tail.appendChild(d);
+  while (tail.children.length > 30) tail.removeChild(tail.firstChild);
+
+  const btn = bit ? $("btnB") : $("btnA");
+  btn.classList.add("pressed");
+  setTimeout(() => btn.classList.remove("pressed"), 90);
+
+  if (k >= N) setTimeout(finishGame, 250);
+}
+
+function finishGame() {
+  const ref = reference(N);
+  const seed = cryptoInt(SEED_SPACE);
+  const seqs = {
+    you: game.seq.slice(),
+    prng: prngBits(seed, N),
+    csprng: cryptoBits(N)
+  };
+  lastResult = {
+    n: N, ref, seed, seqs,
+    stats: { you: analyze(seqs.you), prng: analyze(seqs.prng), csprng: analyze(seqs.csprng) }
+  };
+  game = null;
+  renderResults(lastResult);
+  resetAttack();
+  show("results");
+}
+
+/* ---------------- Rendering ---------------- */
+const pct = (x) => Math.round(100 * x);
+function dotsHTML(seq, opts = {}) {
+  return seq.map((b, i) => {
+    let c = "dot " + (b ? "b" : "a");
+    if (opts.hits && opts.hits[i]) c += " pred";
+    return `<span class="${c}"></span>`;
+  }).join("");
+}
+function patternLabel(i) { return [(i >> 2) & 1, (i >> 1) & 1, i & 1].map(b => b ? "B" : "A").join(""); }
+
+function renderResults(R) {
+  const S = R.stats, ref = R.ref, you = S.you;
+  const tests = [
+    ["bShare", v => pct(v) + " %", r => `${pct(r.lo)}–${pct(r.hi)} %`],
+    ["swShare", v => pct(v) + " %", r => `${pct(r.lo)}–${pct(r.hi)} %`],
+    ["longest", v => String(v), r => `${r.lo}–${r.hi}`],
+    ["chi", v => v.toFixed(1), r => `${r.lo.toFixed(1)}–${r.hi.toFixed(1)}`]
+  ];
+  const passed = tests.filter(([k]) => inRange(you[k], ref[k])).length;
+  const unpred = you.pred <= ref.pred.hi + 1e-9 && you.pred >= ref.pred.lo - 1e-9;
+  const looks = passed === tests.length;
+
+  $("looksScore").innerHTML = `${passed}<small> / ${tests.length}</small>`;
+  $("looksText").textContent = t("looksText")(passed, tests.length);
+  $("predScore").innerHTML = `${pct(you.pred)}<small> %</small>`;
+  $("predText").textContent = t("predText")(pct(you.pred), pct(ref.pred.lo), pct(ref.pred.hi));
+  const meter = $("predMeter");
+  meter.querySelector(".band").style.left = (100 * ref.pred.lo) + "%";
+  meter.querySelector(".band").style.width = (100 * (ref.pred.hi - ref.pred.lo)) + "%";
+  meter.querySelector(".mark").style.left = (100 * you.pred) + "%";
+  const v = TEXT[lang].verdict;
+  $("verdict").textContent = looks && unpred ? v.both : looks ? v.looksNotUnpred : unpred ? v.unpredNotLooks : v.neither;
+
+  // Sources
+  const src = [
+    ["you", t("srcYou"), t("srcYouSub")],
+    ["prng", t("srcPrng"), t("srcPrngSub")],
+    ["csprng", t("srcCsprng"), t("srcCsprngSub")]
+  ];
+  $("sources").innerHTML = src.map(([k, name, sub]) => `
+    <div>
+      <div class="src-head"><h3>${name}</h3><span class="src-tag">${t("oracleOn")} ${pct(S[k].pred)} %</span></div>
+      <div class="small" style="margin-bottom:8px;">${sub}</div>
+      <div class="dots" role="img" aria-label="${name}: ${R.seqs[k].map(b => b ? "B" : "A").join("")}">${dotsHTML(R.seqs[k])}</div>
+    </div>`).join("");
+
+  // Tests table
+  const cell = (k, s, fmt) => {
+    const ok = inRange(s[k], ref[k]);
+    return `<td class="num"><span class="${ok ? "ok" : "warn"}">${fmt(s[k])}</span><span class="sr-only"> (${ok ? t("pass") : t("fail")})</span></td>`;
+  };
+  const rows = [
+    ["bShare", t("tBal"), t("tBalWhy"), tests[0][1], tests[0][2]],
+    ["swShare", t("tSw"), t("tSwWhy"), tests[1][1], tests[1][2]],
+    ["longest", t("tRun"), t("tRunWhy"), tests[2][1], tests[2][2]],
+    ["chi", t("tTri"), t("tTriWhy"), tests[3][1], tests[3][2]],
+    ["pred", t("tPred"), t("tPredWhy"), v => pct(v) + " %", r => `${pct(r.lo)}–${pct(r.hi)} %`]
+  ];
+  $("testsTable").innerHTML = `
+    <thead><tr><th>${t("thTest")}</th><th>${t("thYou")}</th><th>${t("thPrng")}</th><th>${t("thCsprng")}</th><th>${t("thRange")}</th></tr></thead>
+    <tbody>${rows.map(([k, name, why, fmt, rfmt], i) => `
+      <tr${i === 4 ? ' style="border-top:2px solid var(--text-3)"' : ""}>
+        <td><strong>${name}</strong><span class="why">${why}</span></td>
+        ${cell(k, S.you, fmt)}${cell(k, S.prng, fmt)}${cell(k, S.csprng, fmt)}
+        <td class="num muted">${rfmt(ref[k])}</td>
+      </tr>`).join("")}</tbody>`;
+  $("rangeNote").textContent = t("rangeNote")(SIMS.toLocaleString(lang === "fi" ? "fi-FI" : "en-US"));
+
+  // Triplet bars
+  const e = (R.n - 2) / 8;
+  const max = Math.max(e * 1.4, ...you.tri);
+  const eTxt = e.toFixed(1);
+  $("bars").innerHTML = you.tri.map((c, i) => `
+    <div class="col" data-tip="${t("triTip")(patternLabel(i).split("").join(" "), c, eTxt)}">
+      <div class="val">${c}</div>
+      <div class="bar" style="height:${(100 * c / max) * 0.82}%"></div>
+    </div>`).join("") +
+    `<div class="expect" style="bottom:${(100 * e / max) * 0.82}%"><span>${eTxt}</span></div>`;
+  $("bars").setAttribute("aria-label", you.tri.map((c, i) => `${patternLabel(i)} ${c}`).join(", "));
+  $("barLabels").innerHTML = you.tri.map((_, i) =>
+    `<div>${[(i >> 2) & 1, (i >> 1) & 1, i & 1].map(b => `<span class="dot ${b ? "b" : "a"}"></span>`).join("")}</div>`).join("");
+  $("triNote").textContent = t("triNote")(eTxt);
+}
+
+/* ---------------- Seed-guessing attack ---------------- */
+const OBSERVE = 32;
+let attackRunning = false;
+function resetAttack() {
+  if (!lastResult) return;
+  const R = lastResult;
+  paintAttackDots("atkDotsP", R.seqs.prng, null);
+  paintAttackDots("atkDotsC", R.seqs.csprng, null);
+  $("atkLogP").textContent = t("atkIdle");
+  $("atkLogC").textContent = t("atkIdle");
+  $("attackBtn").textContent = t("attackBtn");
+  $("attackBtn").disabled = false;
+}
+function paintAttackDots(id, seq, predicted) {
+  // first OBSERVE dots are "seen"; the rest are dimmed until predicted (ring = correct prediction)
+  $(id).innerHTML = seq.map((b, i) => {
+    let c = "dot " + (b ? "b" : "a");
+    if (i >= OBSERVE) {
+      if (predicted && predicted[i - OBSERVE] === b) c += " pred";
+      else if (!predicted) c += " dim";
+    }
+    return `<span class="${c}"></span>`;
+  }).join("");
+}
+function bruteForce(observed, onProgress, done) {
+  // try every seed; report progress in chunks so the screen can animate
+  let seed = 0, found = -1;
+  const t0 = performance.now();
+  const chunk = 1024;
+  let workMs = 0;
+  function step() {
+    const s0 = performance.now();
+    const end = Math.min(SEED_SPACE, seed + chunk);
+    for (; seed < end; seed++) {
+      const next = mulberry32(seed);
+      let j = 0;
+      while (j < observed.length && next() === observed[j]) j++;
+      if (j === observed.length) { found = seed; seed++; break; }
+    }
+    workMs += performance.now() - s0;
+    onProgress(seed);
+    if (found >= 0 || seed >= SEED_SPACE) done(found, workMs);
+    else setTimeout(step, 16); // slow down for the audience; real work is tiny
+  }
+  step();
+}
+function runAttack() {
+  if (attackRunning || !lastResult) return;
+  attackRunning = true;
+  $("attackBtn").disabled = true;
+  const R = lastResult, n = R.n;
+  const lines = { P: [t("atkSeen")(OBSERVE)], C: [t("atkSeen")(OBSERVE)] };
+  const paint = () => { $("atkLogP").textContent = lines.P.join("\n"); $("atkLogC").textContent = lines.C.join("\n"); };
+  let finished = 0;
+  const end = () => { if (++finished === 2) { attackRunning = false; $("attackBtn").disabled = false; $("attackBtn").textContent = t("attackAgain"); } };
+
+  // PRNG
+  lines.P.push("");
+  bruteForce(R.seqs.prng.slice(0, OBSERVE), (i) => { lines.P[1] = t("atkTrying")(i, SEED_SPACE); paint(); }, (seed, ms) => {
+    const pred = prngBits(seed, n).slice(OBSERVE);
+    const truth = R.seqs.prng.slice(OBSERVE);
+    const ok = pred.filter((b, i) => b === truth[i]).length;
+    lines.P.push(t("atkFound")(seed, Math.max(1, Math.round(ms))));
+    lines.P.push(t("atkPredicted")(ok, truth.length));
+    paint();
+    paintAttackDots("atkDotsP", R.seqs.prng, pred);
+    end();
+  });
+  // CSPRNG: the same attack, against data with no seed behind it
+  lines.C.push("");
+  bruteForce(R.seqs.csprng.slice(0, OBSERVE), (i) => { lines.C[1] = t("atkTrying")(i, SEED_SPACE); paint(); }, (seed) => {
+    if (seed >= 0) { // astronomically unlikely (≈ 65536 / 2^32) – handle honestly anyway
+      const pred = prngBits(seed, n).slice(OBSERVE);
+      const truth = R.seqs.csprng.slice(OBSERVE);
+      const ok = pred.filter((b, i) => b === truth[i]).length;
+      lines.C.push(t("atkPredicted")(ok, truth.length));
+    } else {
+      lines.C.push(t("atkNone")(SEED_SPACE));
+      lines.C.push(t("atkNoSeed"));
+    }
+    paint();
+    end();
+  });
+}
+
+/* ---------------- Tooltip ---------------- */
+const tip = $("tip");
+document.addEventListener("pointerover", (e) => {
+  const el = e.target.closest("[data-tip]");
+  if (!el) { tip.style.display = "none"; return; }
+  tip.textContent = el.dataset.tip;
+  tip.style.display = "block";
+  const r = el.getBoundingClientRect();
+  const w = tip.offsetWidth;
+  tip.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, r.left + r.width / 2 - w / 2)) + "px";
+  tip.style.top = Math.max(8, r.top - tip.offsetHeight - 8) + "px";
+});
+document.addEventListener("scroll", () => { tip.style.display = "none"; }, { passive: true });
+
+/* ---------------- Input wiring ---------------- */
+function bindChoice(el, bit) {
+  el.addEventListener("pointerdown", (e) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    e.preventDefault();
+    press(bit);
+  });
+  el.addEventListener("click", (e) => { if (e.detail === 0) press(bit); }); // keyboard activation (Enter/Space)
+  el.addEventListener("contextmenu", (e) => e.preventDefault());
+}
+bindChoice($("btnA"), 0);
+bindChoice($("btnB"), 1);
+document.addEventListener("keydown", (e) => {
+  if (current !== "play" || e.repeat) return;
+  const k = e.key.toLowerCase();
+  if (k === "arrowleft" || k === "a") { e.preventDefault(); press(0); }
+  else if (k === "arrowright" || k === "b") { e.preventDefault(); press(1); }
+});
+
+$("startBtn").addEventListener("click", startGame);
+$("againBtn").addEventListener("click", () => { lastResult = null; show("intro"); });
+$("quitBtn").addEventListener("click", () => { game = null; show("intro"); });
+$("attackBtn").addEventListener("click", runAttack);
+document.querySelectorAll("#lenSeg button").forEach(b => b.addEventListener("click", () => {
+  N = +b.dataset.n;
+  document.querySelectorAll("#lenSeg button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+}));
+document.querySelectorAll(".lang button").forEach(b => b.addEventListener("click", () => {
+  lang = b.dataset.lang;
+  applyTexts();
+  if (current === "results" && !attackRunning) resetAttack();
+}));
+
+/* ---------------- Kiosk: return to start after inactivity ---------------- */
+const IDLE_MS = 120000;
+let idleTimer = null;
+function poke() {
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(() => {
+    if (current !== "intro") { game = null; lastResult = null; show("intro"); }
+  }, IDLE_MS);
+}
+["pointerdown", "keydown", "scroll"].forEach(ev => document.addEventListener(ev, poke, { passive: true }));
+poke();
+
+applyTexts();
+</script>
+</body>
+</html>
